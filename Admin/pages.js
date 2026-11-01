@@ -44,6 +44,7 @@ function loginPage() {
   return `
   <section class="login">
     <div class="login-art">
+      <div class="light-rays" data-light-rays='{"raysOrigin":"top-center","raysColor":"#ffffff","raysSpeed":1,"lightSpread":0.5,"rayLength":3,"glow":0.6,"haze":0.25,"followMouse":true,"mouseInfluence":0.1}'></div>
       <img class="logo logo-lg" src="pickago_Logo.png" alt="Pickago">
       <h2>Fresh orders, ready when students are.</h2>
     </div>

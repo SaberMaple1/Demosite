@@ -2,6 +2,7 @@ const LABEL = { menu: 'Menu', cart: 'Cart', history: 'Orders', profile: 'Profile
 
 function authView() {
   const side = `<aside class="hero-side">
+    <div class="light-rays" data-light-rays='{"raysOrigin":"top-center","raysColor":"#ffffff","raysSpeed":1,"lightSpread":0.5,"rayLength":3,"glow":0.6,"haze":0.25,"followMouse":true,"mouseInfluence":0.1}'></div>
     <img class="logo logo-lg" src="pickago_Logo.png" alt="Pickago" />
     <div style="position:relative;z-index:1">
       <h1>Good food, ready when you are.</h1>
@@ -126,8 +127,12 @@ function foodCard(f) {
 
       <div class="row sp">
         <span class="price">${peso(f.price)}</span>
-        <button class="btn btn-pop" ${f.stock ? '' : 'disabled'} data-a="add" data-id="${f.id}">
-          Add
+        <button class="cssbuttons-io-button" ${f.stock ? '' : 'disabled'} data-a="add" data-id="${f.id}">
+          <svg height="24" width="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M0 0h24v24H0z" fill="none"></path>
+            <path d="M11 11V5h2v6h6v2h-6v6h-2v-6H5v-2z" fill="currentColor"></path>
+          </svg>
+          <span>Add</span>
         </button>
       </div>
     </div>
