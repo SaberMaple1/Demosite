@@ -19,7 +19,6 @@ function navButtons() {
 function render() {
   const y = window.scrollY;
   const app = $('#app');
-  if (!Store.ready) { app.innerHTML = ''; return; }
   if (!Store.isSignedIn()) { app.innerHTML = loginPage(); return; }
 
   const title = NAV.find((n) => n.id === View.page).label;
@@ -43,7 +42,7 @@ function render() {
 }
 
 /*  Data changes (all go through Store.change*)  */
-function saveFailed() { toast('Could not save. Check your internet.', 'error'); }
+function saveFailed() { toast('Could not save. Browser storage is full, try a smaller photo.', 'error'); }
 
 function setStock(id, value) {
   const n = Math.max(0, Math.floor(Number(value)) || 0);
@@ -78,7 +77,7 @@ async function saveFood(form) {
     Object.assign(f, { name, cat, price, stock, desc: fd.get('desc').trim(), emoji: fd.get('emoji').trim() || '🍽️' });
     if (pendingImage !== undefined) f.image = pendingImage;
   });
-  if (!ok) { err.textContent = 'Could not save. Remove the picture or use a smaller one.'; return; }
+  if (!ok) { err.textContent = 'Storage is full. Remove the picture or use a smaller one.'; return; }
 
   Modal.close();
   if (!id) { View.q = ''; View.cat = ''; }
@@ -213,24 +212,17 @@ document.addEventListener('change', async (e) => {
 
 /*  Form submits  */
 const Forms = {
-  async login(form) {
+  login(form) {
     const fd = new FormData(form);
-    const err = $('#login-err');
-    err.textContent = 'Signing in…';
-    try {
-      const c = await auth.signInWithEmailAndPassword(fd.get('u').trim(), fd.get('p'));
-      if (!isAdminEmail(c.user.email)) {
-        await auth.signOut();
-        err.textContent = 'This account is not allowed to manage the canteen.';
-        return;
-      }
-      const ref = db.collection('app').doc('adminProfile');
-      ref.get().then((sn) => ref.set({ lastLogin: (sn.data() || {}).currentLogin || null, currentLogin: new Date().toISOString() }, { merge: true })).catch(() => {});
-      lastActivity = Date.now();
-      View.page = 'dashboard';
-    } catch (x) {
-      err.textContent = 'Wrong email or password. Check them and try again.';
+    const a = Store.admin;
+    if (fd.get('u').trim() !== a.username || fd.get('p') !== a.password) {
+      $('#login-err').textContent = 'Wrong username or password. Check them and try again.';
+      return;
     }
+    a.lastLogin = a.currentLogin || null;      // show the previous sign-in on the Security tab
+    a.currentLogin = new Date().toISOString();
+    Store.saveAdmin(); Store.signIn(); lastActivity = Date.now();
+    View.page = 'dashboard'; render();
   },
   food: saveFood,
   info(form) {
@@ -238,19 +230,13 @@ const Forms = {
     Object.assign(Store.admin, { name: fd.get('name').trim(), role: fd.get('role').trim(), email: fd.get('email').trim(), phone: fd.get('phone').trim() });
     Store.saveAdmin(); toast('Information saved'); render();
   },
-  async password(form) {
+  password(form) {
     const fd = new FormData(form), err = $('#pw-err'), next = fd.get('next');
+    if (fd.get('current') !== Store.admin.password) { err.textContent = 'Current password is incorrect.'; return; }
     if (next.length < 8) { err.textContent = 'New password needs at least 8 characters.'; return; }
     if (next === fd.get('current')) { err.textContent = 'Choose a password you haven’t used here before.'; return; }
     if (next !== fd.get('confirm')) { err.textContent = 'New passwords don’t match.'; return; }
-    try {
-      const u = auth.currentUser;
-      await u.reauthenticateWithCredential(firebase.auth.EmailAuthProvider.credential(u.email, fd.get('current')));
-      await u.updatePassword(next);
-    } catch (x) {
-      err.textContent = ['auth/invalid-credential', 'auth/wrong-password'].includes(x.code) ? 'Current password is incorrect.' : 'Could not update the password. Try again.';
-      return;
-    }
+    Store.admin.password = next; Store.saveAdmin();
     toast('Password updated'); form.reset(); err.textContent = '';
     $('#pw-bar').style.width = '0';
   },
@@ -263,11 +249,13 @@ document.addEventListener('submit', (e) => {
 
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') Modal.close(); });
 
-/* ---------- Live sync: Firebase tells us when students order ---------- */
-function onRemoteChange() {
+/* ---------- Live sync with the student page (other tab)  */
+window.addEventListener('storage', (e) => {
+  if (e.key !== KEYS.food && e.key !== KEYS.orders) return;
+  Store.loadShared();
   const typing = /INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName || '');
   if (Store.isSignedIn() && !typing && !$('.scrim')) render();
-}
+});
 
 /* ---------- Auto sign-out when idle ---------- */
 ['pointerdown', 'keydown', 'touchstart'].forEach((ev) => document.addEventListener(ev, () => { lastActivity = Date.now(); }, { passive: true }));
@@ -279,5 +267,6 @@ setInterval(() => {
 }, 20000);
 
 /* ---------- Start ---------- */
+Store.load();
 applyPrefs();
 render();

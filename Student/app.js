@@ -43,41 +43,26 @@ const A = {
   },
   logout: () =>
     ask('Log out?', 'You can log back in any time.', 'Log out', () => {
-      auth.signOut();
+      localStorage.removeItem(K.ses);
+      S.view = 'login';
+      S.cart = [];
+      render();
     }),
   delacc: () =>
     ask(
       'Delete your account?',
-      'This can’t be undone.',
+      'This can’t be undone on this device.',
       'Delete',
-      async () => {
-        const m = me(),
-          u = auth.currentUser;
-        const copy = { ...m };
-        delete copy.uid;
-        try {
-          const b = db.batch();
-          b.delete(db.collection('students').doc(m.uid));
-          b.delete(db.collection('lrns').doc(m.lrn));
-          await b.commit();
-          try {
-            await u.delete();
-          } catch (x) {
-            const r = db.batch();
-            r.set(db.collection('students').doc(m.uid), copy);
-            r.set(db.collection('lrns').doc(m.lrn), { uid: m.uid });
-            await r.commit();
-            throw x;
-          }
-          toast('Account deleted');
-        } catch (x) {
-          toast(
-            x.code === 'auth/requires-recent-login'
-              ? 'For safety, log out, log back in, then try again.'
-              : 'Could not delete. Try again.',
-            1,
-          );
-        }
+      () => {
+        const m = me();
+        wr(
+          K.acc,
+          accounts().filter((a) => a.email !== m.email),
+        );
+        localStorage.removeItem(K.ses);
+        S.view = 'login';
+        render();
+        toast('Account deleted');
       },
       1,
     ),
@@ -119,35 +104,37 @@ document.addEventListener('change', async (e) => {
   }
 });
 const F = {
-  async login(f) {
+  login(f) {
     const d = new FormData(f),
       e = d.get('e').trim().toLowerCase(),
       err = $('#err');
     if (Date.now() < S.lock)
       return (err.textContent = `Too many tries. Wait ${Math.ceil((S.lock - Date.now()) / 1000)}s.`);
-    err.textContent = 'Logging in…';
-    try {
-      const c = await auth.signInWithEmailAndPassword(e, d.get('p'));
-      S.fails = 0;
-      S.idleAt = Date.now();
-      const r = db.collection('students').doc(c.user.uid);
-      r.get()
-        .then((sn) =>
-          r.set(
-            { lastLogin: (sn.data() || {}).loginAt || null, loginAt: new Date().toISOString() },
-            { merge: true },
-          ),
-        )
-        .catch(() => {});
-    } catch (x) {
+    const a = accounts().find((x) => x.email.toLowerCase() === e && x.password === d.get('p'));
+    if (!a) {
       if (++S.fails >= 5) {
         S.lock = Date.now() + 30000;
         S.fails = 0;
       }
-      err.textContent = fbErr(x);
+      return (err.textContent = 'Incorrect Gmail or password.');
     }
+    S.fails = 0;
+    wr(
+      K.acc,
+      accounts().map((x) =>
+        x.email === a.email
+          ? { ...x, lastLogin: x.loginAt || null, loginAt: new Date().toISOString() }
+          : x,
+      ),
+    );
+    localStorage.setItem(K.ses, a.email);
+    S.view = 'app';
+    S.page = 'menu';
+    S.idleAt = Date.now();
+    S.sig = '';
+    render();
   },
-  async signup(f) {
+  signup(f) {
     const d = new FormData(f),
       e = d.get('e').trim().toLowerCase(),
       n = d.get('n').trim(),
@@ -158,46 +145,38 @@ const F = {
       return (err.textContent = 'Use a Gmail address (@gmail.com).');
     if (n.length < 3) return (err.textContent = 'Enter your real name.');
     if (!/^\d{12}$/.test(l)) return (err.textContent = 'LRN must be exactly 12 digits.');
+    if (accounts().some((a) => a.email.toLowerCase() === e || a.lrn === l))
+      return (err.textContent = 'An account already exists with this Gmail or LRN.');
     if (!pwOk(p, l))
       return (err.textContent =
         'Password needs 8+ characters, a capital letter, a number, a symbol, and can’t be your LRN.');
     if (p !== d.get('c')) return (err.textContent = 'Passwords don’t match.');
-    err.textContent = 'Creating your account…';
-    let c;
-    try {
-      c = await auth.createUserWithEmailAndPassword(e, p);
-    } catch (x) {
-      return (err.textContent = fbErr(x));
-    }
-    try {
-      const b = db.batch();
-      b.set(db.collection('lrns').doc(l), { uid: c.user.uid });
-      b.set(db.collection('students').doc(c.user.uid), {
-        name: n,
-        email: e,
-        lrn: l,
-        idle: 15,
-        created: new Date().toISOString(),
-      });
-      await b.commit();
-      S.idleAt = Date.now();
-    } catch (x) {
-      await c.user.delete().catch(() => {});
-      await auth.signOut().catch(() => {});
-      toast('An account already exists with this LRN.', 1);
-    }
+    wr(K.acc, [
+      ...accounts(),
+      { name: n, email: e, lrn: l, password: p, idle: 15, created: new Date().toISOString() },
+    ]);
+    localStorage.setItem(K.ses, e);
+    S.view = 'app';
+    S.page = 'menu';
+    S.idleAt = Date.now();
+    render();
   },
-  async forgot(f) {
-    const e = new FormData(f).get('e').trim().toLowerCase(),
+  forgot(f) {
+    const d = new FormData(f),
+      e = d.get('e').trim().toLowerCase(),
       err = $('#err');
-    try {
-      await auth.sendPasswordResetEmail(e);
-    } catch (x) {
-      if (x.code !== 'auth/user-not-found') return (err.textContent = fbErr(x));
-    }
+    const a = accounts().find((x) => x.email.toLowerCase() === e && x.lrn === d.get('l').trim());
+    if (!a) return (err.textContent = 'We couldn’t match that Gmail and LRN.');
+    if (!pwOk(d.get('p'), a.lrn))
+      return (err.textContent =
+        'Password needs 8+ characters, a capital letter, a number and a symbol.');
+    wr(
+      K.acc,
+      accounts().map((x) => (x === a || x.email === a.email ? { ...x, password: d.get('p') } : x)),
+    );
     S.view = 'login';
     render();
-    toast('If that Gmail has an account, a reset link was sent. Check your inbox and spam.');
+    toast('Password reset. Please log in.');
   },
   info(f) {
     const d = new FormData(f);
@@ -207,26 +186,18 @@ const F = {
     toast('Information saved');
     render();
   },
-  async pw(f) {
+  pw(f) {
     const d = new FormData(f),
       m = me(),
       err = $('#err'),
-      n = d.get('n'),
-      cur = d.get('c');
-    if (n === cur) return (err.textContent = 'Choose a different password.');
+      n = d.get('n');
+    if (d.get('c') !== m.password) return (err.textContent = 'Current password is incorrect.');
+    if (n === m.password) return (err.textContent = 'Choose a different password.');
     if (!pwOk(n, m.lrn))
       return (err.textContent =
         'Needs 8+ characters, a capital letter, a number, a symbol, and can’t be your LRN.');
     if (n !== d.get('k')) return (err.textContent = 'Passwords don’t match.');
-    try {
-      const u = auth.currentUser;
-      await u.reauthenticateWithCredential(firebase.auth.EmailAuthProvider.credential(u.email, cur));
-      await u.updatePassword(n);
-    } catch (x) {
-      return (err.textContent = ['auth/invalid-credential', 'auth/wrong-password'].includes(x.code)
-        ? 'Current password is incorrect.'
-        : fbErr(x));
-    }
+    updateMe({ password: n });
     f.reset();
     err.textContent = '';
     $('#bar').style.width = '0';
@@ -247,6 +218,8 @@ document.addEventListener('keydown', (e) => {
   document.addEventListener(ev, () => (S.idleAt = Date.now()), { passive: true }),
 );
 
+const sig = () =>
+  (localStorage.getItem(K.food) || '') + '|' + (localStorage.getItem(K.orders) || '');
 function sync() {
   const s = sig();
   if (s === S.sig) return;
@@ -269,22 +242,14 @@ setInterval(sync, 1500);
 setInterval(() => {
   const m = me();
   if (m && +m.idle && Date.now() - S.idleAt > m.idle * 60000) {
-    auth.signOut();
+    localStorage.removeItem(K.ses);
+    S.view = 'login';
+    render();
     toast('Logged out after inactivity');
   }
 }, 15000);
 
-auth.onAuthStateChanged((u) => {
-  if (!u) {
-    stopData();
-    C.me = null;
-    C.food = [];
-    C.orders = [];
-    S.cart = [];
-    S.seen = {};
-    if (S.view === 'app') S.view = 'login';
-    render();
-    return;
-  }
-  startData(u);
-});
+if (me()) S.view = 'app';
+S.sig = sig();
+myOrders().forEach((o) => (S.seen[o.id] = o.status));
+render();

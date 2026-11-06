@@ -52,7 +52,7 @@ function loginPage() {
       <form data-form="login" autocomplete="on">
         <h1>Canteen portal</h1>
         <p class="mute" style="margin-bottom:1.5rem">Sign in to manage the menu, stock and orders.</p>
-        <label class="field"><span>Email</span><input name="u" type="email" autocomplete="username" required></label>
+        <label class="field"><span>Username</span><input name="u" autocomplete="username" required></label>
         <label class="field"><span>Password</span>
           <div class="pw-wrap"><input name="p" type="password" autocomplete="current-password" required>
           <button type="button" data-act="toggle-pw">Show</button></div>
@@ -339,7 +339,7 @@ function profileTab(a) {
       <label class="field"><span>Full name</span><input name="name" value="${esc(a.name)}" required></label>
       <label class="field"><span>Role</span><input name="role" value="${esc(a.role)}" required></label>
     </div>
-    <label class="field"><span>Sign-in email</span><input value="${esc((auth.currentUser && auth.currentUser.email) || '')}" readonly><small>Sign-in email can’t be changed here.</small></label>
+    <label class="field"><span>Username</span><input value="${esc(a.username)}" readonly><small>Username can’t be changed.</small></label>
     <div class="row">
       <label class="field"><span>Email</span><input name="email" type="email" value="${esc(a.email)}" placeholder="name@school.edu"></label>
       <label class="field"><span>Phone</span><input name="phone" type="tel" value="${esc(a.phone)}" placeholder="09xx xxx xxxx"></label>
