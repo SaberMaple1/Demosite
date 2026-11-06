@@ -43,26 +43,41 @@ const A = {
   },
   logout: () =>
     ask('Log out?', 'You can log back in any time.', 'Log out', () => {
-      localStorage.removeItem(K.ses);
-      S.view = 'login';
-      S.cart = [];
-      render();
+      auth.signOut();
     }),
   delacc: () =>
     ask(
       'Delete your account?',
-      'This can’t be undone on this device.',
+      'This can’t be undone.',
       'Delete',
-      () => {
-        const m = me();
-        wr(
-          K.acc,
-          accounts().filter((a) => a.email !== m.email),
-        );
-        localStorage.removeItem(K.ses);
-        S.view = 'login';
-        render();
-        toast('Account deleted');
+      async () => {
+        const m = me(),
+          u = auth.currentUser;
+        const copy = { ...m };
+        delete copy.uid;
+        try {
+          const b = db.batch();
+          b.delete(db.collection('students').doc(m.uid));
+          b.delete(db.collection('lrns').doc(m.lrn));
+          await b.commit();
+          try {
+            await u.delete();
+          } catch (x) {
+            const r = db.batch();
+            r.set(db.collection('students').doc(m.uid), copy);
+            r.set(db.collection('lrns').doc(m.lrn), { uid: m.uid });
+            await r.commit();
+            throw x;
+          }
+          toast('Account deleted');
+        } catch (x) {
+          toast(
+            x.code === 'auth/requires-recent-login'
+              ? 'For safety, log out, log back in, then try again.'
+              : 'Could not delete. Try again.',
+            1,
+          );
+        }
       },
       1,
     ),
@@ -104,37 +119,35 @@ document.addEventListener('change', async (e) => {
   }
 });
 const F = {
-  login(f) {
+  async login(f) {
     const d = new FormData(f),
       e = d.get('e').trim().toLowerCase(),
       err = $('#err');
     if (Date.now() < S.lock)
       return (err.textContent = `Too many tries. Wait ${Math.ceil((S.lock - Date.now()) / 1000)}s.`);
-    const a = accounts().find((x) => x.email.toLowerCase() === e && x.password === d.get('p'));
-    if (!a) {
+    err.textContent = 'Logging in…';
+    try {
+      const c = await auth.signInWithEmailAndPassword(e, d.get('p'));
+      S.fails = 0;
+      S.idleAt = Date.now();
+      const r = db.collection('students').doc(c.user.uid);
+      r.get()
+        .then((sn) =>
+          r.set(
+            { lastLogin: (sn.data() || {}).loginAt || null, loginAt: new Date().toISOString() },
+            { merge: true },
+          ),
+        )
+        .catch(() => {});
+    } catch (x) {
       if (++S.fails >= 5) {
         S.lock = Date.now() + 30000;
         S.fails = 0;
       }
-      return (err.textContent = 'Incorrect Gmail or password.');
+      err.textContent = fbErr(x);
     }
-    S.fails = 0;
-    wr(
-      K.acc,
-      accounts().map((x) =>
-        x.email === a.email
-          ? { ...x, lastLogin: x.loginAt || null, loginAt: new Date().toISOString() }
-          : x,
-      ),
-    );
-    localStorage.setItem(K.ses, a.email);
-    S.view = 'app';
-    S.page = 'menu';
-    S.idleAt = Date.now();
-    S.sig = '';
-    render();
   },
-  signup(f) {
+  async signup(f) {
     const d = new FormData(f),
       e = d.get('e').trim().toLowerCase(),
       n = d.get('n').trim(),
@@ -145,38 +158,46 @@ const F = {
       return (err.textContent = 'Use a Gmail address (@gmail.com).');
     if (n.length < 3) return (err.textContent = 'Enter your real name.');
     if (!/^\d{12}$/.test(l)) return (err.textContent = 'LRN must be exactly 12 digits.');
-    if (accounts().some((a) => a.email.toLowerCase() === e || a.lrn === l))
-      return (err.textContent = 'An account already exists with this Gmail or LRN.');
     if (!pwOk(p, l))
       return (err.textContent =
         'Password needs 8+ characters, a capital letter, a number, a symbol, and can’t be your LRN.');
     if (p !== d.get('c')) return (err.textContent = 'Passwords don’t match.');
-    wr(K.acc, [
-      ...accounts(),
-      { name: n, email: e, lrn: l, password: p, idle: 15, created: new Date().toISOString() },
-    ]);
-    localStorage.setItem(K.ses, e);
-    S.view = 'app';
-    S.page = 'menu';
-    S.idleAt = Date.now();
-    render();
+    err.textContent = 'Creating your account…';
+    let c;
+    try {
+      c = await auth.createUserWithEmailAndPassword(e, p);
+    } catch (x) {
+      return (err.textContent = fbErr(x));
+    }
+    try {
+      const b = db.batch();
+      b.set(db.collection('lrns').doc(l), { uid: c.user.uid });
+      b.set(db.collection('students').doc(c.user.uid), {
+        name: n,
+        email: e,
+        lrn: l,
+        idle: 15,
+        created: new Date().toISOString(),
+      });
+      await b.commit();
+      S.idleAt = Date.now();
+    } catch (x) {
+      await c.user.delete().catch(() => {});
+      await auth.signOut().catch(() => {});
+      toast('An account already exists with this LRN.', 1);
+    }
   },
-  forgot(f) {
-    const d = new FormData(f),
-      e = d.get('e').trim().toLowerCase(),
+  async forgot(f) {
+    const e = new FormData(f).get('e').trim().toLowerCase(),
       err = $('#err');
-    const a = accounts().find((x) => x.email.toLowerCase() === e && x.lrn === d.get('l').trim());
-    if (!a) return (err.textContent = 'We couldn’t match that Gmail and LRN.');
-    if (!pwOk(d.get('p'), a.lrn))
-      return (err.textContent =
-        'Password needs 8+ characters, a capital letter, a number and a symbol.');
-    wr(
-      K.acc,
-      accounts().map((x) => (x === a || x.email === a.email ? { ...x, password: d.get('p') } : x)),
-    );
+    try {
+      await auth.sendPasswordResetEmail(e);
+    } catch (x) {
+      if (x.code !== 'auth/user-not-found') return (err.textContent = fbErr(x));
+    }
     S.view = 'login';
     render();
-    toast('Password reset. Please log in.');
+    toast('If that Gmail has an account, a reset link was sent. Check your inbox and spam.');
   },
   info(f) {
     const d = new FormData(f);
@@ -186,18 +207,26 @@ const F = {
     toast('Information saved');
     render();
   },
-  pw(f) {
+  async pw(f) {
     const d = new FormData(f),
       m = me(),
       err = $('#err'),
-      n = d.get('n');
-    if (d.get('c') !== m.password) return (err.textContent = 'Current password is incorrect.');
-    if (n === m.password) return (err.textContent = 'Choose a different password.');
+      n = d.get('n'),
+      cur = d.get('c');
+    if (n === cur) return (err.textContent = 'Choose a different password.');
     if (!pwOk(n, m.lrn))
       return (err.textContent =
         'Needs 8+ characters, a capital letter, a number, a symbol, and can’t be your LRN.');
     if (n !== d.get('k')) return (err.textContent = 'Passwords don’t match.');
-    updateMe({ password: n });
+    try {
+      const u = auth.currentUser;
+      await u.reauthenticateWithCredential(firebase.auth.EmailAuthProvider.credential(u.email, cur));
+      await u.updatePassword(n);
+    } catch (x) {
+      return (err.textContent = ['auth/invalid-credential', 'auth/wrong-password'].includes(x.code)
+        ? 'Current password is incorrect.'
+        : fbErr(x));
+    }
     f.reset();
     err.textContent = '';
     $('#bar').style.width = '0';
@@ -218,8 +247,6 @@ document.addEventListener('keydown', (e) => {
   document.addEventListener(ev, () => (S.idleAt = Date.now()), { passive: true }),
 );
 
-const sig = () =>
-  (localStorage.getItem(K.food) || '') + '|' + (localStorage.getItem(K.orders) || '');
 function sync() {
   const s = sig();
   if (s === S.sig) return;
@@ -242,14 +269,22 @@ setInterval(sync, 1500);
 setInterval(() => {
   const m = me();
   if (m && +m.idle && Date.now() - S.idleAt > m.idle * 60000) {
-    localStorage.removeItem(K.ses);
-    S.view = 'login';
-    render();
+    auth.signOut();
     toast('Logged out after inactivity');
   }
 }, 15000);
 
-if (me()) S.view = 'app';
-S.sig = sig();
-myOrders().forEach((o) => (S.seen[o.id] = o.status));
-render();
+auth.onAuthStateChanged((u) => {
+  if (!u) {
+    stopData();
+    C.me = null;
+    C.food = [];
+    C.orders = [];
+    S.cart = [];
+    S.seen = {};
+    if (S.view === 'app') S.view = 'login';
+    render();
+    return;
+  }
+  startData(u);
+});

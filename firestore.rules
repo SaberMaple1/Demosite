@@ -1,0 +1,58 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // >>> CHANGE_ME: put the canteen manager's email here (same as in firebase-config.js)
+    function isAdmin() {
+      return request.auth != null
+        && request.auth.token.email.lower() == 'CHANGE_ME@gmail.com';
+    }
+    function signedIn() { return request.auth != null; }
+
+    // Menu: any logged-in user can read. Only admin edits.
+    // A student may only LOWER the stock (that is what placing an order does).
+    match /food/{id} {
+      allow read: if signedIn();
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin()
+        || (signedIn()
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['stock'])
+            && request.resource.data.stock < resource.data.stock
+            && request.resource.data.stock >= 0);
+    }
+
+    // Orders: students see and create only their own. Admin sees and updates all.
+    match /orders/{id} {
+      allow read: if isAdmin()
+        || (signedIn() && resource.data.studentId == request.auth.token.email);
+      allow create: if signedIn()
+        && request.resource.data.studentId == request.auth.token.email
+        && request.resource.data.status == 'Pending';
+      allow update, delete: if isAdmin();
+    }
+
+    // Order number counter: can only go up by exactly 1.
+    match /meta/orderCounter {
+      allow read: if signedIn();
+      allow write: if signedIn()
+        && request.resource.data.n == (resource == null ? 1 : resource.data.n + 1);
+    }
+
+    // Student profiles: each student reads/writes only their own.
+    match /students/{uid} {
+      allow read: if signedIn() && (request.auth.uid == uid || isAdmin());
+      allow create, update, delete: if signedIn() && request.auth.uid == uid;
+    }
+
+    // One document per LRN, so two accounts can't share an LRN.
+    match /lrns/{lrn} {
+      allow create: if signedIn() && request.resource.data.uid == request.auth.uid;
+      allow delete: if signedIn() && resource.data.uid == request.auth.uid;
+    }
+
+    // Admin profile and settings.
+    match /app/{doc} {
+      allow read, write: if isAdmin();
+    }
+  }
+}

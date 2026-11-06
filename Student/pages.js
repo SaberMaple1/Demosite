@@ -83,22 +83,13 @@ function authView() {
   if (v === 'forgot')
     f = `<form class="box" data-f="forgot">
       <h2>Reset password</h2>
-      <p class="mute">Confirm it’s you with your Gmail and LRN, then choose a new password.</p>
+      <p class="mute">Enter your Gmail and we’ll email you a link to choose a new password.</p>
       <label class="field">
         <span>Gmail</span>
         <input name="e" type="email" required />
       </label>
-
-      <label class="field">
-        <span>LRN</span>
-        <input name="l" inputmode="numeric" maxlength="12" required />
-      </label>
-      <label class="field">
-        <span>New password</span>
-        <input name="p" type="password" required autocomplete="new-password" />
-      </label>
       <div class="err" id="err"></div>
-      <button class="btn btn-p block">Reset password</button>
+      <button class="btn btn-p block">Send reset link</button>
       <button type="button" class="lk" data-a="view" data-v="login">Back to log in</button>
     </form>`;
   return `<div class="auth">
