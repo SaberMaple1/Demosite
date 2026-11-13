@@ -133,7 +133,7 @@ function foodCard(f) {
   const tone = stockTone(f.stock);
   return `
   <article class="food ${tone}">
-    <div class="food-media">${f.image ? `<img src="${f.image}" alt="${esc(f.name)}" loading="lazy">` : `<span aria-hidden="true">${esc(f.emoji)}</span>`}${stockBadge(f.stock)}</div>
+    <div class="food-media">${f.image ? `<img src="${f.image}" alt="${esc(f.name)}" loading="lazy" onerror="this.replaceWith(document.createTextNode(this.dataset.e))" data-e="${esc(f.emoji)}">` : `<span aria-hidden="true">${esc(f.emoji)}</span>`}${stockBadge(f.stock)}</div>
     <div class="food-body">
       <h3>${esc(f.name)}</h3>
       <div class="food-meta"><span class="food-cat">${esc(f.cat)}</span><span class="food-price">${peso(f.price)}</span></div>

@@ -5,6 +5,21 @@ const KEYS = {
   session: 'pickagoStaffSession',
 };
 
+
+/* Old image paths -> new ones, so menus saved in the browser keep working */
+const IMAGE_RENAMES = {
+  'filipino-chicken-adobo-dish.png': 'chicken-adobo.jpg',
+  'IMG_6761.png': 'veggie-lumpia.jpg',
+  'filipino-style-spaghetti-.png': 'spaghetti-hotdog.jpg',
+  'Calamansi-Juice-1.png': 'calamansi-tea.jpg',
+  'blog-ube-cheese-pandesal.png': 'ube-pandesal.jpg',
+  'Banana-Cue-Recipes.png': 'banana-cue.jpg',
+};
+function fixImage(img) {
+  const m = String(img || '').match(/^(\.\.\/Images\/)([^/]+)$/);
+  return m && IMAGE_RENAMES[m[2]] ? m[1] + IMAGE_RENAMES[m[2]] : img;
+}
+
 const LOW_STOCK = 5;
 const STATUS = { PENDING: 'Pending', READY: 'Ready to Pick Up', DONE: 'Completed' };
 
@@ -35,12 +50,12 @@ const DEFAULT_ADMIN = {
 
 function seedFood() {
   return [
-    { id: 1, name: 'Chicken Adobo Rice Bowl', desc: 'Soy-vinegar braised chicken over rice.', cat: 'Meals', price: 75, stock: 12, emoji: '🍗', image: '../Images/filipino-chicken-adobo-dish.png' },
-    { id: 2, name: 'Veggie Lumpia', desc: 'Crispy rolls with sweet chili dip.', cat: 'Snacks', price: 35, stock: 8, emoji: '🥬', image: '../Images/IMG_6761.png' },
-    { id: 3, name: 'Spaghetti with Hotdog', desc: 'Sweet-style spaghetti, sliced hotdog.', cat: 'Meals', price: 60, stock: 4, emoji: '🍝', image: '../Images/filipino-style-spaghetti-.png' },
-    { id: 4, name: 'Iced Calamansi Tea', desc: 'Cold tea with fresh calamansi.', cat: 'Drinks', price: 25, stock: 15, emoji: '🧋', image: '../Images/Calamansi-Juice-1.png' },
-    { id: 5, name: 'Ube Cheese Pandesal', desc: 'Soft ube bread with melted cheese.', cat: 'Desserts', price: 30, stock: 3, emoji: '🍞', image: '../Images/blog-ube-cheese-pandesal.png' },
-    { id: 6, name: 'Banana Cue', desc: 'Caramelized fried saba banana.', cat: 'Snacks', price: 20, stock: 0, emoji: '🍌', image: '../Images/Banana-Cue-Recipes.png' },
+    { id: 1, name: 'Chicken Adobo Rice Bowl', desc: 'Soy-vinegar braised chicken over rice.', cat: 'Meals', price: 75, stock: 12, emoji: '🍗', image: '../Images/chicken-adobo.jpg' },
+    { id: 2, name: 'Veggie Lumpia', desc: 'Crispy rolls with sweet chili dip.', cat: 'Snacks', price: 35, stock: 8, emoji: '🥬', image: '../Images/veggie-lumpia.jpg' },
+    { id: 3, name: 'Spaghetti with Hotdog', desc: 'Sweet-style spaghetti, sliced hotdog.', cat: 'Meals', price: 60, stock: 4, emoji: '🍝', image: '../Images/spaghetti-hotdog.jpg' },
+    { id: 4, name: 'Iced Calamansi Tea', desc: 'Cold tea with fresh calamansi.', cat: 'Drinks', price: 25, stock: 15, emoji: '🥤', image: '../Images/calamansi-tea.jpg' },
+    { id: 5, name: 'Ube Cheese Pandesal', desc: 'Soft ube bread with melted cheese.', cat: 'Desserts', price: 30, stock: 3, emoji: '🍞', image: '../Images/ube-pandesal.jpg' },
+    { id: 6, name: 'Banana Cue', desc: 'Caramelized fried saba banana.', cat: 'Snacks', price: 20, stock: 0, emoji: '🍌', image: '../Images/banana-cue.jpg' },
   ];
 }
 
@@ -92,9 +107,11 @@ const Store = {
     this.food = food.map((f) => ({
       desc: '', image: '', emoji: '🍽️',
       ...f,
+      image: fixImage(f.image),
       price: Number(f.price) || 0,
       stock: Math.max(0, Number(f.stock) || 0),
     }));
+    if (food.some((f) => fixImage(f.image) !== f.image)) this.write(KEYS.food, this.food);
     this.orders = orders.map((o) => ({
       ...o,
       
