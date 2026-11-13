@@ -1,14 +1,12 @@
 /*===== Shared storage: the SAME keys the admin portal uses  */
 const K={food:'pickagoLiveFood',orders:'pickagoLiveOrders',acc:'pickagoStudentAccounts',ses:'pickagoStudentSession'};
-const IMAGE_RENAMES={'filipino-chicken-adobo-dish.png':'chicken-adobo.png','IMG_6761.png':'veggie-lumpia.png','filipino-style-spaghetti-.png':'spaghetti-hotdog.png','Calamansi-Juice-1.png':'calamansi-tea.png','blog-ube-cheese-pandesal.png':'ube-pandesal.png','Banana-Cue-Recipes.png':'banana-cue.png','chicken-adobo.jpg':'chicken-adobo.png','veggie-lumpia.jpg':'veggie-lumpia.png','spaghetti-hotdog.jpg':'spaghetti-hotdog.png','calamansi-tea.jpg':'calamansi-tea.png','ube-pandesal.jpg':'ube-pandesal.png','banana-cue.jpg':'banana-cue.png'};
-const fixImage=(i)=>{const m=String(i||'').match(/^(\.\.\/Images\/)([^/]+)$/);return m&&IMAGE_RENAMES[m[2]]?m[1]+IMAGE_RENAMES[m[2]]:i};
 const rd=(k,f)=>{
   try{const v=JSON.parse(localStorage.getItem(k));return v??f}catch{return f}
 };
 const wr=(k,v)=>{
   try{localStorage.setItem(k,JSON.stringify(v));return true}catch{return false}
 };
-const foods=()=>(rd(K.food,[])||[]).filter(f=>f&&f.name).map(f=>({emoji:'🍽️',desc:'',image:'',...f,image:fixImage(f.image),price:+f.price||0,stock:Math.max(0,+f.stock||0)}));
+const foods=()=>(rd(K.food,[])||[]).filter(f=>f&&f.name).map(f=>({emoji:'🍽️',desc:'',image:'',...f,price:+f.price||0,stock:Math.max(0,+f.stock||0)}));
 const accounts=()=>{
   const a=rd(K.acc,[]);return Array.isArray(a)?a:[]
 };

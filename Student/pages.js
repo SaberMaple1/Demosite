@@ -117,7 +117,7 @@ function foodCard(f) {
   return ` <article class="food">
     <div class="ph">
       <span class="tag ${st[0]}">${st[1]}</span>
-      ${f.image ? `<img src="${f.image}" alt="" onerror="this.replaceWith(document.createTextNode(this.dataset.e))" data-e="${esc(f.emoji)}" />` : f.emoji}
+      ${f.image ? `<img src="${f.image}" alt="" />` : f.emoji}
     </div>
 
     <div class="fb">
@@ -206,7 +206,7 @@ function cartPage() {
             (x) =>
               `<div class="line">
                 <span class="th"
-                  >${x.image ? `<img src="${x.image}" alt="" onerror="this.replaceWith(document.createTextNode(this.dataset.e))" data-e="${esc(x.emoji)}" />` : x.emoji}</span
+                  >${x.image ? `<img src="${x.image}" alt="" />` : x.emoji}</span
                 >
                 <div style="flex:1">
                   <b>${esc(x.name)}</b>
