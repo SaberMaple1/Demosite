@@ -35,12 +35,12 @@ const DEFAULT_ADMIN = {
 
 function seedFood() {
   return [
-    { id: 1, name: 'Chicken Adobo Rice Bowl', desc: 'Soy-vinegar braised chicken over rice.', cat: 'Meals', price: 75, stock: 12, emoji: '🍗', image: '' },
-    { id: 2, name: 'Veggie Lumpia', desc: 'Crispy rolls with sweet chili dip.', cat: 'Snacks', price: 35, stock: 8, emoji: '🥬', image: '' },
-    { id: 3, name: 'Spaghetti with Hotdog', desc: 'Sweet-style spaghetti, sliced hotdog.', cat: 'Meals', price: 60, stock: 4, emoji: '🍝', image: '' },
-    { id: 4, name: 'Iced Calamansi Tea', desc: 'Cold tea with fresh calamansi.', cat: 'Drinks', price: 25, stock: 15, emoji: '🧋', image: '' },
-    { id: 5, name: 'Ube Cheese Pandesal', desc: 'Soft ube bread with melted cheese.', cat: 'Desserts', price: 30, stock: 3, emoji: '🍞', image: '' },
-    { id: 6, name: 'Banana Cue', desc: 'Caramelized fried saba banana.', cat: 'Snacks', price: 20, stock: 0, emoji: '🍌', image: '' },
+    { id: 1, name: 'Chicken Adobo Rice Bowl', desc: 'Soy-vinegar braised chicken over rice.', cat: 'Meals', price: 75, stock: 12, emoji: '🍗', image: '../Images/filipino-chicken-adobo-dish.png' },
+    { id: 2, name: 'Veggie Lumpia', desc: 'Crispy rolls with sweet chili dip.', cat: 'Snacks', price: 35, stock: 8, emoji: '🥬', image: '../Images/IMG_6761.png' },
+    { id: 3, name: 'Spaghetti with Hotdog', desc: 'Sweet-style spaghetti, sliced hotdog.', cat: 'Meals', price: 60, stock: 4, emoji: '🍝', image: '../Images/filipino-style-spaghetti-.png' },
+    { id: 4, name: 'Iced Calamansi Tea', desc: 'Cold tea with fresh calamansi.', cat: 'Drinks', price: 25, stock: 15, emoji: '🧋', image: '../Images/Calamansi-Juice-1.png' },
+    { id: 5, name: 'Ube Cheese Pandesal', desc: 'Soft ube bread with melted cheese.', cat: 'Desserts', price: 30, stock: 3, emoji: '🍞', image: '../Images/blog-ube-cheese-pandesal.png' },
+    { id: 6, name: 'Banana Cue', desc: 'Caramelized fried saba banana.', cat: 'Snacks', price: 20, stock: 0, emoji: '🍌', image: '../Images/Banana-Cue-Recipes.png' },
   ];
 }
 

@@ -191,9 +191,8 @@ function menuPage() {
 
 function cartPage() {
   const l = cartLines();
-  if (!l.length) return;
-
-  `<div class="empty">
+  if (!l.length)
+    return `<div class="empty">
     <h2>Your cart is empty</h2>
     <p>Pick something from the menu.</p>
     <button class="btn btn-p" data-a="nav" data-p="menu">Browse menu</button>
