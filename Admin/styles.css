@@ -360,3 +360,6 @@ hr { border: 0; border-top: 1px solid var(--line); margin: 1.4rem 0; }
 .subtabs button[aria-selected="true"] { background: var(--brand); color: #fff; border-color: var(--brand); }
 .panel + .panel { margin-top: 1.2rem; }
 textarea.names { width: 100%; min-height: 110px; font: inherit; padding: .7rem; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: inherit; }
+
+.toolbar { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: .8rem; }
+.tbl td.acts { white-space: normal; flex-wrap: wrap; min-width: 250px; }

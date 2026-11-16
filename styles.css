@@ -343,3 +343,17 @@ hr { border: 0; border-top: 1px solid var(--line); margin: 1.4rem 0; }
 .role-tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: .4rem; margin: 1rem 0 1.4rem; }
 .role-tabs button { padding: .65rem .3rem; border: 1px solid var(--line); background: var(--surface); color: inherit; border-radius: 12px; font: inherit; font-weight: 700; font-size: .85rem; cursor: pointer; }
 .role-tabs button[aria-selected="true"] { background: var(--brand); border-color: var(--brand); color: #fff; }
+
+/* ---- sign-up steps, legal links ---- */
+.step { color: var(--mute); font-weight: 700; font-size: .8rem; letter-spacing: .06em; text-transform: uppercase; margin-bottom: .3rem; }
+.hint { color: var(--mute); font-size: .82rem; margin: -.3rem 0 1rem; }
+.agree { display: flex; gap: .6rem; align-items: flex-start; font-size: .9rem; margin: .4rem 0 .6rem; }
+.agree input { margin-top: .25rem; width: 1.05rem; height: 1.05rem; accent-color: var(--brand); flex: none; }
+.agree a, .legal a { color: var(--brand); font-weight: 700; }
+.legal { text-align: center; font-size: .85rem; color: var(--mute); margin-top: 1.4rem; }
+.or { display: flex; align-items: center; gap: .8rem; color: var(--mute); font-size: .85rem; margin: 1.1rem 0 .7rem; }
+.or::before, .or::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+.link { display: block; margin: .9rem auto 0; background: none; border: 0; color: var(--brand); font: inherit; font-weight: 700; cursor: pointer; text-decoration: underline; }
+.locked { background: var(--bg); font-weight: 800; letter-spacing: .04em; }
+.idbox { font-size: 2rem; font-weight: 800; letter-spacing: .06em; background: var(--bg); border: 1px dashed var(--line); border-radius: 14px; padding: .8rem 1rem; text-align: center; margin-bottom: 1.2rem; }
+.btn[disabled] { opacity: .6; cursor: not-allowed; }

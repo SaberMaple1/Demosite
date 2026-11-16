@@ -75,7 +75,7 @@ async function saveFood(form) {
   if (!(price >= 0)) { err.textContent = 'Price must be 0 or more.'; return; }
   if (!(stock >= 0)) { err.textContent = 'Stock must be 0 or more.'; return; }
 
-  const p = { id, name, cat, price, stock, desc: fd.get('desc').trim(), emoji: fd.get('emoji').trim() || '🍽️' };
+  const p = { id, name, cat, price, stock, desc: fd.get('desc').trim(), emoji: fd.get('emoji').trim() || '🍽️', preorder: fd.get('preorder') === 'on' };
   if (pendingImage !== undefined) p.image = pendingImage;
   try { await Auth.call('food_save', { p }); } catch (e) { err.textContent = e.message; return; }
 
@@ -183,6 +183,7 @@ document.addEventListener('change', async (e) => {
   const t = e.target;
   switch (t.dataset.change) {
     case 'stock-set': setStock(Number(t.dataset.id), t.value); break;
+    case 'food-avail': act(() => Auth.call('food_available', { p_id: Number(t.dataset.id), p_available: t.checked }), t.checked ? 'Available again' : 'Marked not available today'); break;
     case 'menu-cat': View.cat = t.value; $('#food-grid').innerHTML = foodGrid(); break;
     case 'sales-date': if (t.value) { View.salesDate = t.value; render(); } break;
     case 'idle': Actions.pref({ k: 'idleMinutes', v: t.value }); break;

@@ -7,8 +7,10 @@ function dayKey(value) {
   const pad = (n) => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
-const todayKey = () => dayKey(new Date());
-const orderDate = (o) => o.createdAt || new Date();
+/* "Today" comes from the server (Philippine time). An order belongs to the day it is picked up, so
+   pre-orders for tomorrow don't count as today's orders or sales. */
+const todayKey = () => (Auth.data.settings && Auth.data.settings.today) || dayKey(new Date());
+const orderDate = (o) => (o.pickupDate ? new Date(o.pickupDate + 'T12:00:00') : o.createdAt || new Date());
 
 const DEFAULT_ADMIN = {
   name: 'Admin',

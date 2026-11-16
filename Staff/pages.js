@@ -27,7 +27,7 @@ function stockBadge(n) {
   if (n <= LOW_STOCK) return `<span class="stock stock-low">Low, ${n} left</span>`;
   return `<span class="stock stock-ok">${n} in stock</span>`;
 }
-const stockTone = (n) => (n <= 0 ? 'out' : n <= LOW_STOCK ? 'low' : 'ok');
+const stockTone = (n, off) => (off || n <= 0 ? 'out' : n <= LOW_STOCK ? 'low' : 'ok');
 
 function statusChip(status) {
   const cls = status === STATUS.PENDING ? 'pending' : status === STATUS.DONE ? 'done' : 'ready';
@@ -49,7 +49,7 @@ function orderCard(o) {
   const next = NEXT_STEP[o.status];
   return `
   <article class="order">
-    <div class="order-top"><span><strong>${esc(o.id)}</strong> <span class="mute">${esc(o.date || '')}</span></span>${statusChip(o.status)}</div>
+    <div class="order-top"><span><strong>${esc(o.id)}</strong> <span class="mute">${esc(o.date || '')}</span>${o.preorder ? ` <span class="chip chip-pre">Pre-order · ${esc(Auth.dayLabel(o.pickupDate))}</span>` : ''}</span>${statusChip(o.status)}</div>
     <p class="order-student">${esc(o.student || 'Student')}</p>
     <ul>${o.items.map((i) => `<li>${esc(i.qty)}× ${esc(i.name)}</li>`).join('')}</ul>
     ${o.note ? `<p class="note"><strong>Note:</strong> ${esc(o.note)}</p>` : ''}
@@ -68,6 +68,23 @@ function ordersList() {
     return `<div class="empty"><strong>${f === 'done' ? 'Nothing completed yet' : 'No orders waiting'}</strong>New student orders show up here automatically.</div>`;
   }
   return `<div class="orders">${list.map(orderCard).join('')}</div>`;
+}
+
+/*   Pre-orders (for tomorrow)   */
+function preorderSection() {
+  const today = todayKey();
+  const list = Store.orders.filter((o) => o.pickupDate && o.pickupDate > today && o.status !== STATUS.DONE);
+  if (!list.length) return '';
+  const days = [...new Set(list.map((o) => o.pickupDate))].sort();
+  return days.map((day) => {
+    const orders = list.filter((o) => o.pickupDate === day).sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)));
+    const tally = {};
+    orders.forEach((o) => o.items.forEach((i) => { tally[i.name] = (tally[i.name] || 0) + Number(i.qty); }));
+    return `
+    <div class="section-title" style="margin-top:1.6rem"><h2>Pre-orders for ${esc(Auth.dayLabel(day))}</h2><span class="mute">${orders.length} order${orders.length === 1 ? '' : 's'}</span></div>
+    <div class="panel prep"><strong>To prepare:</strong> ${Object.entries(tally).sort((a, b) => b[1] - a[1]).map(([n, q]) => `<span class="chip chip-pre">${q}× ${esc(n)}</span>`).join(' ')}</div>
+    <div class="orders">${orders.map(orderCard).join('')}</div>`;
+  }).join('');
 }
 
 /*   Dashboard   */
@@ -91,6 +108,7 @@ function dashboardPage() {
         <div class="segmented" role="group" aria-label="Filter orders">${seg('active', 'Active')}${seg('done', 'Completed')}${seg('all', 'All')}</div>
       </div>
       <div id="orders-list">${ordersList()}</div>
+      ${preorderSection()}
     </div>
     <aside class="panel">
       <div class="panel-head"><h2>Needs restock</h2></div>
@@ -105,13 +123,14 @@ function dashboardPage() {
 
 /*   Menu management   */
 function foodCard(f) {
-  const tone = stockTone(f.stock);
+  const tone = stockTone(f.stock, f.soldOut);
   return `
   <article class="food ${tone}">
     <div class="food-media">${f.image ? `<img src="${imgSrc(f.image)}" alt="${esc(f.name)}" loading="lazy" onerror="this.replaceWith(document.createTextNode(this.dataset.e))" data-e="${esc(f.emoji)}">` : `<span aria-hidden="true">${esc(f.emoji)}</span>`}${stockBadge(f.stock)}</div>
     <div class="food-body">
       <h3>${esc(f.name)}</h3>
       <div class="food-meta"><span class="food-cat">${esc(f.cat)}</span><span class="food-price">${peso(f.price)}</span></div>
+      <label class="avail-row"><span>${f.soldOut ? '<b>Not available today</b>' : 'Available today'}</span><input type="checkbox" class="sw" data-change="food-avail" data-id="${f.id}" ${f.soldOut ? '' : 'checked'} aria-label="Available today: ${esc(f.name)}"></label>
       <div class="stepper">
         <button class="btn" data-act="stock" data-id="${f.id}" data-d="-1" aria-label="Decrease stock of ${esc(f.name)}">−</button>
         <input type="number" min="0" inputmode="numeric" value="${f.stock}" data-change="stock-set" data-id="${f.id}" aria-label="Stock of ${esc(f.name)}">
@@ -175,6 +194,7 @@ function foodFormHtml(f) {
       <label class="field"><span>Emoji</span><input name="emoji" value="${esc(f.emoji)}" maxlength="4"><small>Shown when there is no picture.</small></label>
     </div>
     <label class="field"><span>Description</span><textarea name="desc" rows="2" maxlength="140">${esc(f.desc)}</textarea></label>
+    <label class="avail-row" style="margin-bottom:1rem"><span>Students can pre-order this for tomorrow</span><input type="checkbox" class="sw" name="preorder" ${f.preorder === false ? '' : 'checked'}></label>
     <p class="error-text" id="food-err" role="alert"></p>
     <div class="sheet-actions">
       <button type="button" class="btn" data-act="modal-close">Cancel</button>

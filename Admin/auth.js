@@ -31,11 +31,11 @@ const Auth = (() => {
   }
   const call = (fn, args = {}) => rpc(fn, { p_token: token(), ...args });
 
-  async function login(role, id, pw) {
-    const r = await rpc('app_login', { p_role: role, p_id: id, p_pw: pw });
+  async function login(id, pw) {
+    const r = await rpc('app_login', { p_id: id, p_pw: pw });
     if (!r.ok) return r;
-    clearSession(); saveSession({ token: r.token, role, user: r.user });
-    return { ok: true };
+    clearSession(); saveSession({ token: r.token, role: r.user.role, user: r.user });
+    return { ok: true, role: r.user.role };
   }
   function logout() {
     const t = token(); clearSession();
@@ -66,10 +66,12 @@ const Auth = (() => {
   const changePassword = (oldPw, newPw) => call('change_password', { p_old: oldPw, p_new: newPw });
 
   /* ---- ordering rules (decided by the server; shown here) ---- */
-  const DEFAULTS = { websiteOpen: true, ordersOpen: true, cutoffOn: false, opensAt: '07:00', cutoffAt: '11:00', notice: '' };
+  const DEFAULTS = { websiteOpen: true, ordersOpen: true, preorderOn: true, cutoffOn: false, opensAt: '07:00', cutoffAt: '11:00', notice: '' };
   const settings = () => ({ ...DEFAULTS, ...(data.settings || {}) });
-  const orderStatus = () => (data.settings && data.settings.status) || { open: false, site: true, key: 'loading', msg: 'Checking if ordering is open…' };
+  const orderStatus = () => (data.settings && data.settings.status) || { open: false, pre: false, site: true, key: 'loading', msg: 'Checking if ordering is open…', preMsg: 'Checking if pre-orders are open…' };
   const fmt = (t) => { const [h, m] = String(t).split(':').map(Number); return `${h % 12 || 12}:${String(m || 0).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`; };
 
-  return { data, rpc, call, login, logout, expired, session, current, sync, updateProfile, changePassword, settings, orderStatus, fmt };
+  const dayLabel = (iso) => (iso ? new Date(iso + 'T12:00:00').toLocaleDateString('en-PH', { weekday: 'short', month: 'short', day: 'numeric' }) : '');
+
+  return { dayLabel, data, rpc, call, login, logout, expired, session, current, sync, updateProfile, changePassword, settings, orderStatus, fmt };
 })();

@@ -1,18 +1,33 @@
 const LABEL = { menu: 'Menu', cart: 'Cart', history: 'Orders', profile: 'Profile' };
 
 function statusBanner() {
-  const st = Auth.orderStatus();
-  if (!st.open) return `<div class="closed-banner"><b>Ordering is closed.</b> ${esc(st.msg)}</div>`;
-  return Auth.settings().cutoffOn ? `<div class="open-banner">${esc(st.msg)}</div>` : '';
+  const st = Auth.orderStatus(), set = Auth.settings();
+  if (S.when === 'tomorrow')
+    return st.pre
+      ? `<div class="open-banner">Pre-ordering for <b>tomorrow, ${esc(Auth.dayLabel(set.tomorrow))}</b>. Pay and pick up tomorrow.</div>`
+      : `<div class="closed-banner"><b>Pre-orders are closed.</b> ${esc(st.preMsg)}</div>`;
+  if (!st.open) return `<div class="closed-banner"><b>Ordering is closed.</b> ${esc(st.msg)}${st.pre ? ' You can still pre-order for tomorrow.' : ''}</div>`;
+  return set.cutoffOn ? `<div class="open-banner">${esc(st.msg)}</div>` : '';
+}
+
+/* Today / Tomorrow (pre-order) switch */
+function whenSwitch() {
+  const set = Auth.settings();
+  if (!set.preorderOn) return '';
+  return `<div class="chips when" role="group" aria-label="Order for">
+    <button class="${S.when === 'today' ? 'on' : ''}" data-a="when" data-v="today">Order for today</button>
+    <button class="${S.when === 'tomorrow' ? 'on' : ''}" data-a="when" data-v="tomorrow">Pre-order for tomorrow · ${esc(Auth.dayLabel(set.tomorrow))}</button>
+  </div>`;
 }
 
 function foodCard(f) {
-  const st =
-    f.stock === 0
-      ? ['out', 'Out of stock']
-      : f.stock <= 5
-        ? ['low', `Only ${f.stock} left`]
-        : ['', `${f.stock} available`];
+  const pre = S.when === 'tomorrow';
+  const st = pre
+    ? f.preorder ? ['', 'Pre-order'] : ['out', 'No pre-order']
+    : f.soldOut ? ['out', 'Not available today']
+    : f.stock === 0 ? ['out', 'Out of stock']
+    : f.stock <= 5 ? ['low', `Only ${f.stock} left`]
+    : ['', `${f.stock} available`];
   return ` <article class="food">
     <div class="ph">
       <span class="tag ${st[0]}">${st[1]}</span>
@@ -26,7 +41,7 @@ function foodCard(f) {
 
       <div class="row sp">
         <span class="price">${peso(f.price)}</span>
-        <button class="cssbuttons-io-button" ${f.stock && Auth.orderStatus().open ? '' : 'disabled'} data-a="add" data-id="${f.id}">
+        <button class="cssbuttons-io-button" ${canOrder(f) ? '' : 'disabled'} data-a="add" data-id="${f.id}">
           <svg height="24" width="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
             <path d="M0 0h24v24H0z" fill="none"></path>
             <path d="M11 11V5h2v6h6v2h-6v6h-2v-6H5v-2z" fill="currentColor"></path>
@@ -65,7 +80,7 @@ function menuPage() {
     ),
   ].sort((a, b) => (a === 'All' ? -1 : b === 'All' ? 1 : a.localeCompare(b)));
   if (!cats.includes(S.cat)) S.cat = 'All';
-  return `${statusBanner()}<div class="banner">
+  return `${statusBanner()}${whenSwitch()}<div class="banner">
       <div>
         <h1>Hi ${esc(m.name.split(' ')[0])}, what’s for lunch?</h1>
         <p>The menu updates live whenever the canteen changes it.</p>
@@ -97,7 +112,7 @@ function cartPage() {
     <button class="btn btn-p" data-a="nav" data-p="menu">Browse menu</button>
   </div>`;
 
-  return `${statusBanner()}<h2 style="margin-bottom:1rem">Your cart</h2>
+  return `${statusBanner()}${whenSwitch()}<h2 style="margin-bottom:1rem">Your cart</h2>
     <div class="two">
       <section class="card">
         ${l
@@ -137,9 +152,9 @@ ${esc(S.note)}</textarea
         </label>
 
         <p class="mute" style="font-size:.85rem">
-          Pay at pick-up. Your food is only reserved once you place the order.
+          ${S.when === 'tomorrow' ? 'Pay at pick-up tomorrow. The canteen prepares pre-orders that day.' : 'Pay at pick-up. Your food is only reserved once you place the order.'}
         </p>
-        <button class="btn btn-p block" data-a="place" ${Auth.orderStatus().open && !S.busy ? '' : 'disabled'}>${S.busy ? 'Placing order…' : 'Place order'}</button>
+        <button class="btn btn-p block" data-a="place" ${orderOpen() && !S.busy ? '' : 'disabled'}>${S.busy ? 'Placing order…' : S.when === 'tomorrow' ? 'Place pre-order' : 'Place order'}</button>
       </aside>
     </div>`;
 }
@@ -151,7 +166,7 @@ function orderCard(o) {
   return `<article class="card">
     <div class="row sp">
       <div>
-        <small class="mute">Order ${esc(o.id)} · ${esc(o.date)}</small>
+        <small class="mute">Order ${esc(o.id)} · ${esc(o.date)}${o.preorder ? ` · <b>Pre-order for ${esc(Auth.dayLabel(o.pickupDate))}</b>` : ''}</small>
         <h3 style="margin-top:.2rem">
           ${o.items.map((x) => `${x.qty}× ${esc(x.name)}`).join(', ')}
         </h3>
@@ -205,6 +220,7 @@ function receiptPage() {
         <img class="logo logo-md" src="pickago_Logo.png" alt="Pickago" style="margin:0 auto .5rem" />
         <h2>Order ${esc(o.id)}</h2>
         <p class="mute">${esc(o.date)}</p>
+        ${o.preorder ? `<p><b>Pre-order · pick up on ${esc(Auth.dayLabel(o.pickupDate))}</b></p>` : ''}
         <span class="badge ${o.status.split(' ')[0]}">${esc(o.status)} </span>
       </div>
 

@@ -17,6 +17,10 @@ const A = {
     S.cat = d.c;
     render();
   },
+  when: (d) => {
+    S.when = d.v === 'tomorrow' ? 'tomorrow' : 'today';
+    render();
+  },
   add: (d) => addCart(+d.id, 1),
   qty: (d) => addCart(+d.id, +d.d),
   place: placeOrder,

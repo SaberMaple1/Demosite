@@ -828,3 +828,6 @@ dd {
 .closed-page { min-height: 100vh; display: grid; place-content: center; justify-items: center; gap: .8rem; text-align: center; padding: 2rem; }
 .closed-page h1 { font-size: 1.8rem; } .closed-page p { max-width: 36ch; color: #666; }
 .cssbuttons-io-button[disabled], .btn[disabled] { opacity: .5; cursor: not-allowed; }
+
+/* ---- today / tomorrow switch ---- */
+.when { margin-bottom: 1rem; }

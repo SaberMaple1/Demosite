@@ -338,3 +338,12 @@ hr { border: 0; border-top: 1px solid var(--line); margin: 1.4rem 0; }
   width: 100%;
   height: 100%;
 }
+
+/* ---- availability switch + pre-orders ---- */
+.avail-row { display: flex; justify-content: space-between; align-items: center; gap: .8rem; padding: .35rem 0 .6rem; font-size: .9rem; cursor: pointer; }
+.sw { appearance: none; -webkit-appearance: none; width: 42px; height: 24px; border-radius: 999px; background: #c4bdd1; position: relative; cursor: pointer; flex: none; transition: .2s; }
+.sw::after { content: ""; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: #fff; transition: .2s; }
+.sw:checked { background: var(--brand); } .sw:checked::after { left: 21px; }
+.chip-pre { background: #e8e0f7; color: #3d2a75; }
+.prep { padding: .8rem 1rem; margin-bottom: 1rem; display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; }
+.food.out .avail-row { opacity: 1; }
