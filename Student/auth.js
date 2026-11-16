@@ -1,8 +1,8 @@
 /* auth.js — the link between every page and the Supabase database.
    Login, the menu, orders and the open/closed rules all come from the server. */
 const Auth = (() => {
-  const API = 'https://hdcehdwjumsexmueijjn.supabase.co/rest/v1/rpc/';
-  const KEY = 'sb_publishable_XYYoTcILfDGJBGMvwlERxA_aYR-Adic';   // public "publishable" key: safe to put in a website
+  const API = 'https://dnvdymbizukyzfjttihq.supabase.co/rest/v1/rpc/';
+  const KEY = 'sb_publishable_i9Tq-V1Dh-X3jqPfSvNSVQ_Varg4Nbp';   // public "publishable" key: safe to put in a website
   const LOGIN = (document.currentScript && document.currentScript.dataset.login) || 'index.html';
   const SK = 'pickagoSession';
   const data = { foods: [], cats: [], orders: [], settings: null, etag: '' };
